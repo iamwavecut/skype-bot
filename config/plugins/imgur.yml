@@ -1,0 +1,8 @@
+enabled: true
+
+api:
+  id: "app id"
+  secret: "secret key"
+
+session:
+  token: ""

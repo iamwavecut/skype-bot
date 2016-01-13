@@ -1,0 +1,4 @@
+enabled: true
+
+connect_timeout: 5
+response_timeout: 10

@@ -1,0 +1,26 @@
+{
+    "name": "wavecutz/skype-bot",
+    "type": "project",
+    "description": "Modern web skype bot and stuff",
+    "keywords": ["skype", "bot", "web"],
+    "homepage": "https://github.com/WaveCutz/skype-bot",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Valeriy Selitskiy",
+            "email": "wavecut@shy.by"
+        }
+    ],
+    "require": {
+        "php-di/php-di": "^5.1",
+        "doctrine/annotations": "^1.2",
+        "react/event-loop": "^0.4.1",
+        "sabre/event": "~2.0.0",
+        "guzzlehttp/guzzle": "^6.1",
+        "coderockr/php-query": "dev-master",
+        "yandex/translate-api": "^1.5",
+        "adyg/php-imgur-api-client": "dev-master",
+        "symfony/yaml": "^2.7"
+    },
+    "mininmum-stability": "dev-master"
+}

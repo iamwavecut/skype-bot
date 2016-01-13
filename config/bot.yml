@@ -1,0 +1,23 @@
+# bot config
+debug: true # to be more verbose
+web:
+  username: skypeusername
+  password: skypepassword
+
+plugins:
+  - admin
+  - anekdot
+  - bash
+  - commands
+  - flood_check
+  - http
+  - imgur
+  - jenkins_watcher
+  - join_gatekeeper
+  - join_release
+  - quiz_server
+  - reactions
+  - shortik
+  - translator
+  - rss
+  - mediametrics

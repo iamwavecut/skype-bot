@@ -1,0 +1,7 @@
+enabled: true
+
+google:
+  youtube:
+    api:
+      url: "https://www.googleapis.com/youtube/v3/videos"
+      key: "api_key"

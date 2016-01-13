@@ -1,0 +1,18 @@
+enabled: false
+refresh_timeout: 60
+format: '%title% %link%'
+
+feeds:
+  habr:
+    enabled: false
+    url: http://habrahabr.ru/rss/feed/posts/all/{userhash}/
+    format: '%title% %link%'
+    chats:
+      - 'chatId'
+
+  rbc:
+    enabled: true
+    url: 'http://static.feed.rbc.ru/rbc/internal/rss.rbc.ru/rbc.ru/finances.rss'
+    chats:
+      - 'chatId'
+

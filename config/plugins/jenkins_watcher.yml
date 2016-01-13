@@ -1,0 +1,12 @@
+# might be useless to you
+enabled: false
+
+jobs:
+  "TestBot":
+    skipSections: ["start", "success"]
+    prod: "https://your-deployment.url/version.txt"
+    dev: "https://your-deployment.url/version.txt"
+
+auth:
+  user: http_auth_user
+  passwd: http_auth_password

@@ -1,0 +1,4 @@
+enabled: true
+
+users:
+  admins: ["your_nickname"]
