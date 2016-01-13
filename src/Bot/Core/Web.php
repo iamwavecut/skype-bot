@@ -93,6 +93,7 @@ class Web implements CoreInterface
 
     private $resourceTypes = [
         'NewMessage',
+        'ThreadUpdate',
     ];
 
     private $messageTypes = [
@@ -424,10 +425,18 @@ class Web implements CoreInterface
         }
 
         $message = $eventMessage['resource'];
-        $messageType = $message['messagetype'];
+
+        switch ($eventMessage['resourceType']) {
+            case 'NewMessage':
+                $messageType = $message['messagetype'];
+                break;
+            case 'ThreadUpdate':
+                $messageType = $eventMessage['resourceType'];
+                break;
+        }
 
         if (!in_array($messageType, $this->messageTypes)) {
-            \Util::debug($message);
+            \Util::debug($messageType);
             return;
         }
 
@@ -435,8 +444,8 @@ class Web implements CoreInterface
             case 'Text':
             case 'RichText':
                 $body = $message['content'];
-                $chatName = substr($message['conversationLink'], strrpos($message['conversationLink'], ':') + 1);
-                $sender = substr($message['from'], strrpos($message['from'], ':') + 1);
+                $chatName = $this->extractId($message['conversationLink']);
+                $sender = $this->extractId($message['from']);
                 $senderName = $message['imdisplayname'];
                 $time = new \DateTime($message['composetime']);
                 \Util::store('container')->get('event')->emit(
@@ -446,29 +455,46 @@ class Web implements CoreInterface
 
                 break;
 
-//            case 'KICKED':
-//                $chatName = $this->getMessageProp($message_id, 'CHATNAME');
-//                $sender = $this->getMessageProp($message_id, 'FROM_HANDLE');
-//                $senderName = $this->getMessageProp($message_id, 'FROM_DISPNAME');
-//                $usersKicked = explode(' ', $this->getMessageProp($message_id, 'USERS'));
-//                \Util::store('container')->get('event')->emit(
-//                    \Bot\Core\CoreInterface::KICKED,
-//                    [$sender, $senderName, $chatName, $usersKicked]
-//                );
-//
-//                break;
-//
-//            case 'ADDEDMEMBERS':
-//                $chatName = $this->getMessageProp($message_id, 'CHATNAME');
-//                $sender = $this->getMessageProp($message_id, 'FROM_HANDLE');
-//                $senderName = $this->getMessageProp($message_id, 'FROM_DISPNAME');
-//                $usersAdded = explode(' ', $this->getMessageProp($message_id, 'USERS'));
-//                \Util::store('container')->get('event')->emit(
-//                    \Bot\Core\CoreInterface::ADDED,
-//                    [$sender, $senderName, $chatName, $usersAdded]
-//                );
-//
-//                break;
+            case 'ThreadActivity/DeleteMember':
+                $usersLeft = [];
+                $body = $message['content'];
+                $body = pq($body);
+
+                foreach ($body->find('target') as $target) {
+                    $usersLeft[] = $this->extractId($target);
+                }
+
+                $chatName = $this->extractId($message['conversationLink']);
+                $sender = $this->extractId($message['from']);
+                $senderName = $message['imdisplayname'];
+                $time = new \DateTime($message['composetime']);
+                \Util::store('container')->get('event')->emit(
+                    \Bot\Core\CoreInterface::KICKED,
+                    [$sender, $senderName, $chatName, $usersLeft]
+                );
+
+                break;
+
+            case 'ThreadActivity/AddMember':
+                $usersAdded = [];
+                $body = $message['content'];
+                $body = pq($body);
+
+                foreach ($body->find('target') as $target) {
+                    $usersAdded[] = $this->extractId($target);
+                }
+
+                $chatName = $this->extractId($message['conversationLink']);
+                $sender = $this->extractId($message['from']);
+                $senderName = $message['imdisplayname'];
+                $time = new \DateTime($message['composetime']);
+
+                \Util::store('container')->get('event')->emit(
+                    \Bot\Core\CoreInterface::ADDED,
+                    [$sender, $senderName, $chatName, $usersAdded, $time]
+                );
+
+                break;
         }
     }
 
