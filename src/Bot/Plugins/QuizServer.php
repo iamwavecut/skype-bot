@@ -305,7 +305,7 @@ class QuizServer extends Plugin
 
     private function getQuestion()
     {
-        $num = mt_rand(0, self::getLinesCount(self::QUIZ_DB_PATH));
+        $num = mt_rand(0, \Util::getLinesCount(self::QUIZ_DB_PATH));
         $buffer = \Util::getFileLine(self::QUIZ_DB_PATH, $num);
 
         if ($buffer) {
