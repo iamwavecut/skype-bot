@@ -309,7 +309,7 @@ class Util
 
         $fileHandle = fopen($filePath, 'r');
         $result = null;
-        while ((--$line > 0) && (($buffer = fgets($fileHandle, 2048)) !== false)) {
+        while ((--$line > 0) && (($result = fgets($fileHandle, 4096)) !== false)) {
         }
         fclose($fileHandle);
 
