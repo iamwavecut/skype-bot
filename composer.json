@@ -5,6 +5,7 @@
     "keywords": ["skype", "bot", "web"],
     "homepage": "https://github.com/WaveCutz/skype-bot",
     "license": "MIT",
+    "version": "1.0.0",
     "authors": [
         {
             "name": "Valeriy Selitskiy",
@@ -12,6 +13,10 @@
         }
     ],
     "require": {
+        "php": ">=5.6.0",
+        "ext-curl": "*",
+        "ext-openssl": "*",
+        "ext-json": "*",
         "php-di/php-di": "^5.1",
         "doctrine/annotations": "^1.2",
         "react/event-loop": "^0.4.1",
