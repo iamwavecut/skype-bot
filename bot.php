@@ -1,5 +1,6 @@
 <?php
 set_time_limit(0);
+error_reporting(E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED);
 mb_internal_encoding('UTF-8');
 define('DS', DIRECTORY_SEPARATOR);
 define('ROOT', __DIR__);
