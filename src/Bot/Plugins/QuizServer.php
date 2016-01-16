@@ -143,8 +143,6 @@ class QuizServer extends Plugin
                         }
                         break;
                 }
-
-                return false;
             }
 
             if (isset($running[$chatName])) {
