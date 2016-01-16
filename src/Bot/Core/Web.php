@@ -378,7 +378,7 @@ class Web implements CoreInterface
         $time = time();
         if ($this->initialized) {
             if (!$this->poll && $this->lastPoll <= $time - 1) {
-                \Util::debug('web poll');
+                echo '.';
                 $this->lastPoll = $time;
                 $this->poll = $this->webRequest(
                     $this->endpointUrl . 'SELF/subscriptions/0/poll',
@@ -418,7 +418,6 @@ class Web implements CoreInterface
 
     public function parseEventMessage(array $eventMessage)
     {
-
         if (!in_array($eventMessage['resourceType'], $this->resourceTypes)) {
             \Util::debug($eventMessage);
             return;
@@ -433,12 +432,15 @@ class Web implements CoreInterface
             case 'ThreadUpdate':
                 $messageType = $eventMessage['resourceType'];
                 break;
+            default:
+                \Util::debug($eventMessage);
+                break;
         }
 
         if (!in_array($messageType, $this->messageTypes)) {
-            \Util::debug($messageType);
             return;
         }
+
 
         switch ($messageType) {
             case 'Text':
@@ -446,9 +448,12 @@ class Web implements CoreInterface
                 $body = $message['content'];
                 $chatName = $this->extractId($message['conversationLink']);
                 $sender = $this->extractId($message['from']);
+                if ($sender == $this->container->get('config')['web']['username']) {
+                    return; // ignore self messages
+                }
                 $senderName = $message['imdisplayname'];
                 $time = new \DateTime($message['composetime']);
-                \Util::store('container')->get('event')->emit(
+                $this->container->get('event')->emit(
                     \Bot\Core\CoreInterface::MESSAGE,
                     [$body, $sender, $senderName, $chatName, $time]
                 );
@@ -468,7 +473,7 @@ class Web implements CoreInterface
                 $sender = $this->extractId($message['from']);
                 $senderName = $message['imdisplayname'];
                 $time = new \DateTime($message['composetime']);
-                \Util::store('container')->get('event')->emit(
+                $this->container->get('event')->emit(
                     \Bot\Core\CoreInterface::KICKED,
                     [$sender, $senderName, $chatName, $usersLeft]
                 );
@@ -489,7 +494,7 @@ class Web implements CoreInterface
                 $senderName = $message['imdisplayname'];
                 $time = new \DateTime($message['composetime']);
 
-                \Util::store('container')->get('event')->emit(
+                $this->container->get('event')->emit(
                     \Bot\Core\CoreInterface::ADDED,
                     [$sender, $senderName, $chatName, $usersAdded, $time]
                 );
@@ -533,7 +538,9 @@ class Web implements CoreInterface
     private function parseHeaders($headersString)
     {
         $resultHeaders = [];
-        foreach (explode("\r\n", trim($headersString)) as $headerLine) {
+        $headers = explode("\r\n", trim($headersString));
+        array_shift($headers); // get rid of http header
+        foreach ($headers as $headerLine) {
             list($name, $value) = explode(': ', $headerLine);
             if (array_key_exists($name, $resultHeaders)) {
                 if (!is_array($resultHeaders[$name])) {
