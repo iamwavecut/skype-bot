@@ -6,12 +6,14 @@ It's made as headless daemon, based on `React/event-loop` and `Sabre/event`, usi
 ## Roadmap
 
 1. Refactoring:
+  - [ ] Real asynchronous flow (major)
   - [ ] Core: use guzzle promises instead of raw curl
   - [ ] Internationalization
   - [ ] Separate plugins to other repos
   - [ ] Refactor plugin manager (loading order, recursive dep's checks, etc)
-  - [ ] Refactor DI: change annotations injections to constructor, to see next
-  - [ ] Cover all with tests (f.e. phpunit)
+  - [ ] Refactor DI: change annotationed injections to constructor, to see next
+  - [ ] Cover all with tests (f.e. phpunit) 
+  - [ ] A lot of little improvements (minor priority)
   - [x] to be updated
 
 
