@@ -212,7 +212,7 @@ class Commands extends Message
                 case 'нов':
                 case 'новости':
                     $topNews = $this->mediametrics->getTopNews();
-                    $msg = 'Новости в тренде: ' .PHP_EOL;
+                    $msg = 'Новости в тренде: ' . PHP_EOL;
 
                     foreach ($topNews as $index => $newsLine) {
                         if ($index >= 3) {
@@ -231,6 +231,51 @@ class Commands extends Message
 
                     return false;
 
+                    break;
+
+                case 'х':
+                    $matches = [];
+                    preg_match_all('/[А-ЯЁа-яё]+/u', implode(' ', $arguments), $matches);
+                    /** @var array $words */
+                    $words = end($matches);
+
+                    foreach ($words as $key => $word) {
+                        $matches = [];
+                        if (
+                            preg_match(
+                                '/^[^ауоыиэяюёе]*(?<glasnaya>[ауоыиэяюёе])(?<konec>.+)/iu',
+                                $word,
+                                $matches
+                            )
+                            && $matches
+                            && count($matches)
+                            && $matches['glasnaya']
+                            && $matches['konec']
+                        ) {
+                            $glas = preg_replace(
+                                [
+                                    '/^а/iu',
+                                    '/^о/iu',
+                                    '/^э/iu',
+                                    '/^у/iu',
+                                    '/^ы/iu',
+                                ],
+                                [
+                                    'я',
+                                    'ё',
+                                    'е',
+                                    'ю',
+                                    'и',
+                                ],
+                                $matches['glasnaya']
+                            );
+
+                            $word .= '-' . 'ху' . $glas . $matches['konec'];
+
+                            $words[$key] = $word;
+                        }
+                    }
+                    $this->core->send($chatName, implode(' ', $words));
 
                     break;
 
@@ -356,7 +401,7 @@ class Commands extends Message
     public function getRates($force = false)
     {
         $ratesToGet = [
-            'today'    => strtotime('today'),
+            'today' => strtotime('today'),
             'tomorrow' => strtotime('tomorrow'),
         ];
         $ratesDb = Factory::create(\Util::getLocalPath() . DS . 'rates.json');

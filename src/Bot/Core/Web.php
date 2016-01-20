@@ -403,7 +403,7 @@ class Web implements CoreInterface
 //                    \Util::debug($response);
 
                     $events = json_decode($response, 1);
-                    if (array_key_exists(self::STR_EVENT_MESSAGES, $events)) {
+                    if ($events && array_key_exists(self::STR_EVENT_MESSAGES, $events)) {
                         $events = $events[self::STR_EVENT_MESSAGES];
                         foreach ($events as $event) {
                             $this->parseEventMessage($event);
@@ -517,8 +517,9 @@ class Web implements CoreInterface
         );
 
         $answer = json_decode($response, 1);
-//        \Util::debug($answer);
-        return array_key_exists('OriginalArrivalTime', $answer);
+        if ($answer && !array_key_exists('OriginalArrivalTime', $answer)) {
+            \Util::debug($answer);
+        }
     }
 
     public function getProxy()

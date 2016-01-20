@@ -14,6 +14,7 @@ class Admin extends Message implements GroupAdminInterface
 
     const LOAD_ORDER = 0;
 
+    /** @TODO: move to config/core */
     private static $groups = [
         self::GROUP_REACTIVE,
         self::GROUP_MODERATED,
