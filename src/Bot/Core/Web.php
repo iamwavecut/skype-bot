@@ -19,9 +19,10 @@ use Sabre\Event\EventEmitter;
 class Web implements CoreInterface
 {
     const STR_EVENT_MESSAGES = 'eventMessages';
-    const STR_ID_CHAT = 19;
-    const STR_ID_USER = 8;
-    const TOKEN_TIMEOUT = 86400;
+    const STR_ID_CHAT        = 19;
+    const STR_ID_USER        = 8;
+    const TOKEN_TIMEOUT      = 86400;
+    const CLIENT_INFO        = 'os=Windows; osVer=10; proc=Win32; lcid=en-us; deviceType=1; country=n/a; clientName=skype.com; clientVer=908/1.24.0.74//skype.com';
 
     /**
      * @Inject()
@@ -116,7 +117,6 @@ class Web implements CoreInterface
         if ($this->tokenDb['skypeTokenTimeout'] && $this->tokenDb['skypeTokenTimeout'] < time()) {
             $this->tokenDb->clear();
             \Util::debug('Clearing timed out session');
-
         }
 
         if (!$this->tokenDb['skypeToken']) {
@@ -130,7 +130,7 @@ class Web implements CoreInterface
                 false,
                 true
             );
-            \Util::debug('loginpage');
+            \Util::debug('Checking if authorized already');
 
             $headersPos = strpos($response, "\r\n\r\n");
             $headers = $this->parseHeaders(substr($response, 0, $headersPos));
@@ -150,12 +150,16 @@ class Web implements CoreInterface
                     }
 
                     if ($match && $match[1]) {
+                        \Util::debug('Got skypeToken: ' . $match[1]);
                         $this->setSkypeToken($match[1]);
+                        break;
                     }
                 }
             }
 
             if (!$this->tokenDb['skypeToken']) {
+                \Util::debug('Not authorized');
+
                 $pq = \phpQuery::newDocumentHTML($body);
                 $pie = $pq->find('input[name=pie]')->val();
                 $etm = $pq->find('input[name=etm]')->val();
@@ -165,26 +169,33 @@ class Web implements CoreInterface
                     'https://login.skype.com/login?client_id=578134&redirect_uri=https%3A%2F%2Fweb.skype.com',
                     'POST',
                     [
-                        'username' => $this->username,
-                        'password' => $this->password,
-                        'persistent' => 1,
-                        'pie' => $pie,
-                        'etm' => $etm,
-                        'js_time' => $jsTime,
+                        'username'       => $this->username,
+                        'password'       => $this->password,
+                        'persistent'     => 1,
+                        'pie'            => $pie,
+                        'etm'            => $etm,
+                        'js_time'        => $jsTime,
                         'timezone_field' => '+03|00',
-                        'client_id' => 578134,
-                        'redirect_uri' => 'https://web.skype.com/',
+                        'client_id'      => 578134,
+                        'redirect_uri'   => 'https://web.skype.com/',
                     ]
                 );
                 $pq = \phpQuery::newDocumentHTML($response);
                 $skypeToken = $pq->find('input[name=skypetoken]')->val();
 
                 if ($skypeToken) {
+                    \Util::debug('Got skypeToken: ' . $skypeToken);
                     $this->setSkypeToken($skypeToken);
                 }
             }
         }
 
+        if (!$this->tokenDb['skypeToken']) {
+            \Util::debug('No skypeToken, exiting');
+            die(1);
+        }
+
+        \Util::debug('Getting regToken');
         $response = $this->webRequest(
             'https://web.skype.com/',
             'POST',
@@ -194,16 +205,17 @@ class Web implements CoreInterface
         $response = $this->webRequest(
             'https://client-s.gateway.messenger.live.com/v1/users/ME/endpoints',
             'POST',
-            '{}',
+            '{"endpointFeatures":"Agent"}',
             [
-                'Accept' => 'application/json, text/javascript',
-                'ClientInfo' => 'os=Windows; osVer=10; proc=Win32; lcid=en-us; deviceType=1; country=n/a; clientName=skype.com; clientVer=908/1.21.0.115//skype.com',
+                'Accept'           => 'application/json, text/javascript',
+                'ClientInfo'       => self::CLIENT_INFO,
                 'BehaviorOverride' => 'redirectAs404',
-                'LockAndKey' => 'appId=msmsgs@msnmsgr.com; time=' . $this->lastPoll . '; lockAndKeyResponse=' . md5($this->lastPoll),
-                'Content-Type' => 'application/json; charset=UTF-8',
-                'Origin' => 'https://web.skype.com',
-                'Referer' => 'https://web.skype.com/ru/',
-                'ContextId' => 'tcid=' . $this->lastPoll . '00000000',
+                'LockAndKey'       => 'appId=msmsgs@msnmsgr.com; time=' . $this->lastPoll . '; lockAndKeyResponse=' . hash('sha256',
+                        $this->lastPoll),
+                'Content-Type'     => 'application/json',
+                'Origin'           => 'https://web.skype.com',
+                'Referer'          => 'https://web.skype.com/en/',
+                'ContextId'        => 'tcid=' . $this->lastPoll . '00000000',
             ],
             false,
             true
@@ -214,43 +226,57 @@ class Web implements CoreInterface
 
         $endpointUrl = $headers['Location'];
         if ($endpointUrl) {
+//            \Util::debug('raw endpointUrl: ' . $endpointUrl);
             $this->endpointUrl = rtrim(urldecode($endpointUrl), '/') . '/';
         }
 
         $regToken = $headers['Set-RegistrationToken'];
         if ($regToken) {
             list($regToken, $regTokenTimeout, $endpointId) = explode('; ', $regToken);
-
             $this->regToken = $regToken;
             $this->regTokenTimeout = str_replace('expires=', '', $regTokenTimeout);
             $this->endpointId = str_replace('endpointId=', '', $endpointId);
+            \Util::debug('regToken: ' . $this->regToken);
+            \Util::debug('endpointId: ' . $this->endpointId);
 
-            $this->endpointUrl = str_replace(
-                $this->endpointId . '/',
+            $this->endpointUrl = rtrim(str_replace(
+                '/' . $this->endpointId . '/',
                 '',
                 urldecode($this->endpointUrl)
-            );
-            \Util::debug($this->endpointUrl);
+            ), '/');
+            \Util::debug('endpointUrl: ' . $this->endpointUrl);
+
+            \Util::debug('Creating endpoint');
             $response = $this->webRequest(
-                $this->endpointUrl . $this->endpointId,
+                $this->endpointUrl . '/' . $this->endpointId,
                 'PUT',
-                '{}',
+                '{"endpointFeatures":"Agent"}',
                 [
-                    'Accept' => 'application/json, text/javascript',
-                    'ClientInfo' => 'os=Windows; osVer=10; proc=Win32; lcid=en-us; deviceType=1; country=n/a; clientName=skype.com; clientVer=908/1.22.0.117//skype.com',
+                    'Accept'           => 'application/json, text/javascript',
+                    'Accept-Encoding'  => 'gzip, deflate, sdch',
+                    'Accept-Language'  => 'en-EN;q=1',
                     'BehaviorOverride' => 'redirectAs404',
-                    'Content-Type' => 'application/json; charset=UTF-8',
-                    'Origin' => 'https://web.skype.com',
-                    'Referer' => 'https://web.skype.com/ru/',
-                    'ContextId' => 'tcid=' . $this->lastPoll . '00000000',
+                    'Cache-Control'    => 'no-cache, no-store, must-revalidate',
+                    'ClientInfo'       => self::CLIENT_INFO,
+                    'Connection'       => 'keep-alive',
+                    'Content-Type'     => 'application/json',
+                    'Expires'          => '0',
+                    'Host'             => parse_url($this->endpointUrl, PHP_URL_HOST),
+//                    'LockAndKey'       => 'appId=msmsgs@msnmsgr.com; time=' . $this->lastPoll . '; lockAndKeyResponse=' . hash('sha256', $this->lastPoll),
+                    'Origin'           => 'https://web.skype.com',
+                    'Pragma'           => 'no-cache',
+                    'Referer'          => 'https://web.skype.com/en/',
+                    'ContextId'        => 'tcid=' . $this->lastPoll . '00000000',
                 ],
                 false,
                 true,
                 5
             );
+            \Util::debug('Body: ' . $response);
 
+            \Util::debug('Setting subscriptions');
             $response = $this->webRequest(
-                $this->endpointUrl . 'SELF/subscriptions',
+                $this->endpointUrl . '/' . 'SELF/subscriptions',
                 'POST',
                 '{"channelType":"httpLongPoll","template":"raw","interestedResources":["/v1/users/ME/conversations/ALL/properties","/v1/users/ME/conversations/ALL/messages","/v1/users/ME/contacts/ALL","/v1/threads/ALL"]}',
                 [
@@ -293,7 +319,7 @@ class Web implements CoreInterface
         $headers = array_merge(
             $headers,
             [
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 6.1; rv:2.0.1) Gecko/20100101 Firefox/4.0.1',
+                'User-Agent'     => 'Mozilla/5.0 (Windows NT 6.1; rv:2.0.1) Gecko/20100101 Firefox/4.0.1',
                 'Content-Length' => 0,
             ]
         );
@@ -334,7 +360,9 @@ class Web implements CoreInterface
                 $postData = http_build_query($postData);
             }
             curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-            $headers['Content-Length'] = strlen($postData);
+            $headers['Content-Length'] = mb_strlen($postData);
+//            \Util::debug($postData);
+//            \Util::debug($headers['Content-Length']);
         }
 
         if ($this->regToken) {
@@ -351,7 +379,6 @@ class Web implements CoreInterface
         foreach ($headers as $headerName => $headerValue) {
             $linedHeaders[] = "{$headerName}: {$headerValue}";
         }
-
 
         curl_setopt($ch, CURLOPT_HTTPHEADER, $linedHeaders);
 
@@ -381,7 +408,7 @@ class Web implements CoreInterface
                 echo '.';
                 $this->lastPoll = $time;
                 $this->poll = $this->webRequest(
-                    $this->endpointUrl . 'SELF/subscriptions/0/poll',
+                    $this->endpointUrl . '/' . 'SELF/subscriptions/0/poll',
                     'POST',
                     null,
                     [
@@ -403,11 +430,13 @@ class Web implements CoreInterface
 //                    \Util::debug($response);
 
                     $events = json_decode($response, 1);
-                    if ($events && array_key_exists(self::STR_EVENT_MESSAGES, $events)) {
+                    if (!!$events && count($events) && array_key_exists(self::STR_EVENT_MESSAGES, $events)) {
                         $events = $events[self::STR_EVENT_MESSAGES];
                         foreach ($events as $event) {
                             $this->parseEventMessage($event);
                         }
+                    } elseif (!!$events && count($events)) {
+                        \Util::debug($events);
                     }
 
                     $this->poll = null;
@@ -420,6 +449,7 @@ class Web implements CoreInterface
     {
         if (!in_array($eventMessage['resourceType'], $this->resourceTypes)) {
             \Util::debug($eventMessage);
+
             return;
         }
 
@@ -510,7 +540,12 @@ class Web implements CoreInterface
         $response = $this->webRequest(
             $this->getEndpointHost() . 'v1/users/ME/conversations/' . $this->getIdType($targetId) . ':' . $targetId . '/messages',
             'POST',
-            json_encode(["content" => $message, "messagetype" => "RichText", "contenttype" => "text", "clientmessageid" => $id]),
+            json_encode([
+                "content"         => $message,
+                "messagetype"     => "RichText",
+                "contenttype"     => "text",
+                "clientmessageid" => $id,
+            ]),
             [
                 'Accept' => 'application/json, text/javascript',
             ]
