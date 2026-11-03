@@ -25,7 +25,7 @@
         "coderockr/php-query": "dev-master",
         "yandex/translate-api": "^1.5",
         "adyg/php-imgur-api-client": "dev-master",
-        "symfony/yaml": "^2.7"
+        "symfony/yaml": "^5.4"
     },
     "mininmum-stability": "dev-master"
 }
